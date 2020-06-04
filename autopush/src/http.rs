@@ -56,7 +56,7 @@ impl Service for Push {
                                 response.status(StatusCode::OK);
                                 Body::empty()
                             } else {
-                                response.status(StatusCode::BAD_GATEWAY);
+                                response.status(StatusCode::NOT_FOUND);
                                 Body::from("Client not available.")
                             };
                             Ok(response.body(body).unwrap())
@@ -75,7 +75,7 @@ impl Service for Push {
                         response.status(StatusCode::OK);
                         Body::empty()
                     } else {
-                        response.status(StatusCode::BAD_GATEWAY);
+                        response.status(StatusCode::NOT_FOUND);
                         Body::from("Client not available.")
                     };
                     Ok(response.body(body).unwrap())
