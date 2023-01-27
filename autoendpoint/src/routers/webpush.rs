@@ -1,5 +1,5 @@
-use crate::db::client::DbClient;
-use crate::error::{ApiError, ApiErrorKind, ApiResult};
+use crate::db::{client::DbClient, error::DbError};
+use crate::error::{ApiErrorKind, ApiResult};
 use crate::extractors::notification::Notification;
 use crate::extractors::router_data_input::RouterDataInput;
 use crate::routers::{Router, RouterError, RouterResponse};
@@ -37,7 +37,6 @@ impl Router for WebPushRouter {
         Ok(HashMap::new())
     }
 
-    #[allow(clippy::single_match)] // We use a single match in the .map_err. `if let` is not allowed there.
     async fn route_notification(&self, notification: &Notification) -> ApiResult<RouterResponse> {
         // The notification contains the original subscription information
         let user = &notification.subscription.user;
@@ -83,18 +82,7 @@ impl Router for WebPushRouter {
                             .ok();
                     }
                     debug!("Error while sending webpush notification: {}", error);
-                    if let Some(err) = self.remove_node_id(user, node_id.clone()).await.err() {
-                        match &err.kind {
-                            ApiErrorKind::Database(crate::db::error::DbError::UpdateItem(_)) => {
-                                self.metrics
-                                    .incr_with_tags("error.node.update")
-                                    .with_tag("node_id", node_id)
-                                    .try_send()
-                                    .ok();
-                            }
-                            _ => {}
-                        };
-                    };
+                    self.remove_node_id(user, node_id.clone()).await;
                 }
             }
         }
@@ -169,7 +157,7 @@ impl Router for WebPushRouter {
             Err(error) => {
                 // Can't communicate with the node, so we should stop using it
                 debug!("Error while triggering notification check: {}", error);
-                self.remove_node_id(&user, node_id.clone()).await?;
+                self.remove_node_id(&user, node_id.clone()).await;
                 Ok(self.make_stored_response(notification))
             }
         }
@@ -213,13 +201,26 @@ impl WebPushRouter {
 
     /// Remove the node ID from a user. This is done if the user is no longer
     /// connected to the node.
-    async fn remove_node_id(&self, user: &DynamoDbUser, node_id: String) -> ApiResult<()> {
+    async fn remove_node_id(&self, user: &DynamoDbUser, node_id: String) {
         self.metrics.incr("updates.client.host_gone").ok();
 
-        self.ddb
-            .remove_node_id(user.uaid, node_id, user.connected_at)
-            .await
-            .map_err(ApiError::from)
+        let result = self
+            .ddb
+            .remove_node_id(user.uaid, node_id.clone(), user.connected_at)
+            .await;
+
+        // XXX: I think this could be further narrowed to
+        // use rusoto_dynamodb::UpdateItemError;
+        // Err(DbError::UpdateItem(UpdateItemError::ConditionalCheckFailed(_)))
+        // if we want to be more specific?
+        if matches!(result, Err(DbError::UpdateItem(_))) {
+            self.metrics
+                // XXX: maybe "updates.client.host_gone.error"?
+                .incr_with_tags("error.node.update")
+                .with_tag("node_id", &node_id)
+                .try_send()
+                .ok();
+        }
     }
 
     /// Update metrics and create a response for when a notification has been directly forwarded to
