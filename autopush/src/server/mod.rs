@@ -51,6 +51,7 @@ mod dispatch;
 mod metrics;
 pub mod protocol;
 mod rc;
+pub mod registry;
 mod tls;
 mod webpush_io;
 
@@ -125,6 +126,13 @@ impl AutopushServer {
                 if let Err(err) = thread.join() {
                     result = Err(ApcErrorKind::Thread(err).into());
                 }
+            }
+        }
+        logging::reset_logging();
+        result
+    }
+}
+
 pub struct ServerOptions {
     pub port: u16,
     pub fernet: MultiFernet,

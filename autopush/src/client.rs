@@ -20,9 +20,9 @@ use uuid::Uuid;
 
 use autopush_common::db::{CheckStorageResponse, UserRecord, HelloResponse, RegisterResponse};
 use autopush_common::endpoint::make_endpoint;
-use autopush_common::errors::{ApcError, ApcErrorKind, MyFuture};
+use autopush_common::errors::{ApcError, ApcErrorKind};
 use autopush_common::notification::Notification;
-use autopush_common::util::{ms_since_epoch, sec_since_epoch, user_agent::parse_user_agent};
+use autopush_common::util::{ms_since_epoch, sec_since_epoch, user_agent::UserAgentInfo};
 
 use crate::megaphone::{Broadcast, BroadcastSubs};
 use crate::server::protocol::{ClientMessage, ServerMessage, ServerNotification};
