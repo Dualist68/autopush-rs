@@ -26,14 +26,13 @@ use tokio_tungstenite::{accept_hdr_async, WebSocketStream};
 use tungstenite::handshake::server::Request;
 use tungstenite::{self, Message};
 
-use autopush_common::db::DbClientImpl;
-use autopush_common::db::dynamodb::DdbClientImpl;
 use autopush_common::errors::{ApcError, ApcErrorKind, Result};
 use autopush_common::logging;
 use autopush_common::notification::Notification;
 //use autopush_common::util::timeout;
 
 use crate::{MyFuture, timeout};
+use crate::db::DynamoStorage;
 use crate::client::Client;
 use crate::http;
 use crate::megaphone::{
@@ -118,7 +117,7 @@ impl AutopushServer {
 
     /// Blocks execution of the calling thread until the helper thread with the
     /// tokio reactor has exited.
-    pub fn stop(&self) -> ApiResult<()> {
+    pub fn stop(&self) -> Result<()> {
         let mut result = Ok(());
         if let Some(shutdown_handles) = self.shutdown_handles.take() {
             for ShutdownHandle(tx, thread) in shutdown_handles {
@@ -134,6 +133,7 @@ impl AutopushServer {
 }
 
 pub struct ServerOptions {
+    pub router_port: u16,
     pub port: u16,
     pub fernet: MultiFernet,
     pub ssl_key: Option<PathBuf>,
@@ -158,7 +158,7 @@ pub struct ServerOptions {
 }
 
 impl ServerOptions {
-    pub fn from_settings(settings: Settings) -> ApiResult<Self> {
+    pub fn from_settings(settings: Settings) -> Result<Self> {
         let crypto_key = &settings.crypto_key;
         if !(crypto_key.starts_with('[') && crypto_key.ends_with(']')) {
             return Err(ApcErrorKind::GeneralError("Invalid AUTOPUSH_CRYPTO_KEY".into()).into());
@@ -219,7 +219,7 @@ pub struct Server {
     /// Handle to the Broadcast change monitor
     broadcaster: RefCell<BroadcastChangeTracker>,
     /// Handle to the current Database Client
-    pub db: DbClientImpl,
+    pub ddb: DynamoStorage,
     /// Count of open cells
     open_connections: Cell<u32>,
     /// OBSOLETE
@@ -238,7 +238,7 @@ impl Server {
     /// This will spawn a new server with the `opts` specified, spinning up a
     /// separate thread for the tokio reactor. The returned ShutdownHandles can
     /// be used to interact with it (e.g. shut it down).
-    fn start(opts: &Arc<ServerOptions>) -> ApiResult<Vec<ShutdownHandle>> {
+    fn start(opts: &Arc<ServerOptions>) -> Result<Vec<ShutdownHandle>> {
         let mut shutdown_handles = vec![];
 
         let (inittx, initrx) = oneshot::channel();
@@ -287,7 +287,7 @@ impl Server {
     }
 
     #[allow(clippy::single_char_add_str)]
-    fn new(opts: &Arc<ServerOptions>) -> ApiResult<(Rc<Server>, Core)> {
+    fn new(opts: &Arc<ServerOptions>) -> Result<(Rc<Server>, Core)> {
         let core = Core::new()?;
         let broadcaster = if let Some(ref megaphone_url) = opts.megaphone_api_url {
             let megaphone_token = opts
@@ -304,7 +304,7 @@ impl Server {
         let srv = Rc::new(Server {
             opts: opts.clone(),
             broadcaster: RefCell::new(broadcaster),
-            ddb: DdbClientImpl::from_opts(
+            ddb: DynamoStorage::from_opts(
                 &opts._message_table_name,
                 &opts._router_table_name,
                 metrics.clone(),

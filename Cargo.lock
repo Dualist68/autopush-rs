@@ -623,7 +623,7 @@ dependencies = [
  "sentry",
  "serde",
  "serde_derive",
- "serde_dynamodb",
+ "serde_dynamodb 0.9.0",
  "serde_json",
  "slog",
  "slog-async",
@@ -648,7 +648,7 @@ version = "1.66.0"
 dependencies = [
  "autopush_common",
  "base64 0.21.0",
- "bytes 1.4.0",
+ "bytes 0.4.12",
  "cadence",
  "chrono",
  "config",
@@ -657,6 +657,7 @@ dependencies = [
  "env_logger 0.9.3",
  "fernet",
  "futures 0.1.31",
+ "futures-backoff",
  "futures-locks 0.5.0",
  "hex",
  "httparse",
@@ -665,12 +666,16 @@ dependencies = [
  "log",
  "mozsvc-common",
  "openssl",
+ "rand 0.8.5",
+ "regex",
  "reqwest 0.9.24",
+ "rusoto_core 0.42.0",
+ "rusoto_credential 0.42.0",
  "rusoto_dynamodb 0.42.0",
  "sentry",
  "serde",
  "serde_derive",
- "serde_dynamodb",
+ "serde_dynamodb 0.4.1",
  "serde_json",
  "signal-hook",
  "slog",
@@ -686,7 +691,7 @@ dependencies = [
  "tokio-io",
  "tokio-openssl",
  "tokio-tungstenite",
- "tungstenite 0.9.2",
+ "tungstenite",
  "uuid 1.2.2",
  "woothee",
 ]
@@ -724,7 +729,7 @@ dependencies = [
  "sentry-backtrace",
  "serde",
  "serde_derive",
- "serde_dynamodb",
+ "serde_dynamodb 0.9.0",
  "serde_json",
  "slog",
  "slog-async",
@@ -736,7 +741,7 @@ dependencies = [
  "thiserror",
  "tokio 1.25.0",
  "tokio-core",
- "tungstenite 0.18.0",
+ "tungstenite",
  "url 2.3.1",
  "uuid 1.2.2",
  "woothee",
@@ -4206,6 +4211,16 @@ dependencies = [
 
 [[package]]
 name = "serde_dynamodb"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5a2f694b5265a3612a5f51ce734e71b1865850a13b9390fea3da60a65dba6218"
+dependencies = [
+ "rusoto_dynamodb 0.42.0",
+ "serde",
+]
+
+[[package]]
+name = "serde_dynamodb"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b0a485bf5e371e28d4978444686ffa91830d4719b92fb31960fbd8f494816239"
@@ -5045,7 +5060,7 @@ checksum = "38f95da5281a1a52e72fa3657e571279bcc2b163ba2897ed8eaa34ef97f24fda"
 dependencies = [
  "futures 0.1.31",
  "tokio-io",
- "tungstenite 0.9.2",
+ "tungstenite",
 ]
 
 [[package]]
@@ -5186,20 +5201,6 @@ dependencies = [
  "rand 0.7.3",
  "sha-1",
  "url 2.3.1",
- "utf-8",
-]
-
-[[package]]
-name = "tungstenite"
-version = "0.18.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30ee6ab729cd4cf0fd55218530c4522ed30b7b6081752839b68fcec8d0960788"
-dependencies = [
- "byteorder",
- "bytes 1.4.0",
- "log",
- "rand 0.8.5",
- "thiserror",
  "utf-8",
 ]
 

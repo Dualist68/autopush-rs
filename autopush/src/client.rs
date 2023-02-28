@@ -18,7 +18,7 @@ use std::time::Duration;
 use tokio_core::reactor::Timeout;
 use uuid::Uuid;
 
-use autopush_common::db::{CheckStorageResponse, UserRecord, HelloResponse, RegisterResponse};
+use crate::db::{CheckStorageResponse, DynamoDbUser, HelloResponse, RegisterResponse};
 use autopush_common::endpoint::make_endpoint;
 use autopush_common::errors::{ApcError, ApcErrorKind};
 use autopush_common::notification::Notification;
@@ -776,14 +776,14 @@ where
         + 'static,
 {
     /// Send one or more locally routed notification messages
-    #[state_machine_future(start, transitions(AwaitSendNotif, DetermineAck))]
-    SendNotif {
+    #[state_machine_future(start, transitions(AwaitSend, DetermineAck))]
+    Send {
         smessages: Vec<ServerMessage>,
         data: AuthClientData<T>,
     },
 
-    #[state_machine_future(transitions(DetermineAck, SendNotif, AwaitDropUser))]
-    AwaitSendNotif {
+    #[state_machine_future(transitions(DetermineAck, Send, AwaitDropUser))]
+    AwaitSend {
         smessages: Vec<ServerMessage>,
         data: AuthClientData<T>,
     },
@@ -799,7 +799,7 @@ where
 
     #[state_machine_future(transitions(
         DetermineAck,
-        SendNotif,   // aka `Send` (renamed to avoid confusion)
+        Send,
         AwaitInput,
         AwaitRegister,
         AwaitUnregister,
@@ -819,7 +819,7 @@ where
     #[state_machine_future(transitions(AwaitCheckStorage))]
     CheckStorage { data: AuthClientData<T> },
 
-    #[state_machine_future(transitions(SendNotif, DetermineAck))]
+    #[state_machine_future(transitions(Send, DetermineAck))]
     AwaitCheckStorage {
         response: MyFuture<CheckStorageResponse>,
         data: AuthClientData<T>,
@@ -837,14 +837,14 @@ where
         data: AuthClientData<T>,
     },
 
-    #[state_machine_future(transitions(SendNotif))]
+    #[state_machine_future(transitions(Send))]
     AwaitRegister {
         channel_id: Uuid,
         response: MyFuture<RegisterResponse>,
         data: AuthClientData<T>,
     },
 
-    #[state_machine_future(transitions(SendNotif))]
+    #[state_machine_future(transitions(Send))]
     AwaitUnregister {
         channel_id: Uuid,
         code: u32,
@@ -871,10 +871,10 @@ where
         + Sink<SinkItem = ServerMessage, SinkError = ApcError>
         + 'static,
 {
-    fn poll_send<'a>(send: &'a mut RentToOwn<'a, SendNotif<T>>) -> Poll<AfterSendNotif<T>, ApcError> {
-        trace!("State: SendNotif");
+    fn poll_send<'a>(send: &'a mut RentToOwn<'a, Send<T>>) -> Poll<AfterSend<T>, ApcError> {
+        trace!("State: Send");
         let sent = {
-            let SendNotif {
+            let Send {
                 ref mut smessages,
                 ref mut data,
                 ..
@@ -898,20 +898,20 @@ where
             }
         };
 
-        let SendNotif { smessages, data } = send.take();
+        let Send { smessages, data } = send.take();
         if sent {
-            transition!(AwaitSendNotif { smessages, data });
+            transition!(AwaitSend { smessages, data });
         }
         transition!(DetermineAck { data })
     }
 
     fn poll_await_send<'a>(
-        await_send: &'a mut RentToOwn<'a, AwaitSendNotif<T>>,
-    ) -> Poll<AfterAwaitSendNotif<T>, ApcError> {
-        trace!("State: AwaitSendNotif");
+        await_send: &'a mut RentToOwn<'a, AwaitSend<T>>,
+    ) -> Poll<AfterAwaitSend<T>, ApcError> {
+        trace!("State: AwaitSend");
         try_ready!(await_send.data.ws.poll_complete());
 
-        let AwaitSendNotif { smessages, data } = await_send.take();
+        let AwaitSend { smessages, data } = await_send.take();
         let webpush_rc = data.webpush.clone();
         let webpush = webpush_rc.borrow();
         if webpush.sent_from_storage > data.srv.opts.msg_limit {
@@ -921,7 +921,7 @@ where
             let response = Box::new(data.srv.ddb.drop_uaid(&webpush.uaid));
             transition!(AwaitDropUser { response, data });
         } else if !smessages.is_empty() {
-            transition!(SendNotif { smessages, data });
+            transition!(Send { smessages, data });
         }
         transition!(DetermineAck { data })
     }
@@ -979,7 +979,7 @@ where
                 };
 
                 if let Some(response) = broadcast_delta {
-                    transition!(SendNotif {
+                    transition!(Send {
                         smessages: vec![ServerMessage::Broadcast {
                             broadcasts: response,
                         }],
@@ -1125,7 +1125,7 @@ where
                 if sec_since_epoch() - webpush.last_ping >= 45 {
                     trace!("🏓 Got a ping, sending pong");
                     webpush.last_ping = sec_since_epoch();
-                    transition!(SendNotif {
+                    transition!(Send {
                         smessages: vec![ServerMessage::Ping],
                         data,
                     })
@@ -1140,7 +1140,7 @@ where
                 }
                 debug!("Got a notification to send, sending!");
                 emit_metrics_for_send(&data.srv.metrics, &notif, "Direct", &webpush.ua_info);
-                transition!(SendNotif {
+                transition!(Send {
                     smessages: vec![ServerMessage::Notification(notif)],
                     data,
                 });
@@ -1262,7 +1262,7 @@ where
                 .map(ServerMessage::Notification)
                 .collect();
             webpush.sent_from_storage += smessages.len() as u32;
-            transition!(SendNotif { smessages, data })
+            transition!(Send { smessages, data })
         } else {
             // No messages remaining
             transition!(DetermineAck { data })
@@ -1329,7 +1329,7 @@ where
             webpush.deferred_user_registration = None;
         }
 
-        transition!(SendNotif {
+        transition!(Send {
             smessages: vec![msg],
             data,
         })
@@ -1361,7 +1361,7 @@ where
             .incr_with_tags("ua.command.unregister")
             .with_tag("code", &code.to_string())
             .send();
-        transition!(SendNotif {
+        transition!(Send {
             smessages: vec![msg],
             data,
         })
