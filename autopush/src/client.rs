@@ -39,7 +39,6 @@ pub struct RegisteredClient {
     pub tx: mpsc::UnboundedSender<ServerNotification>,
 }
 
-
 /// Websocket connector client handler
 pub struct Client<T>
 where

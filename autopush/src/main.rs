@@ -4,13 +4,13 @@ extern crate slog_scope;
 #[macro_use]
 extern crate serde_derive;
 
-use std::{env, os::raw::c_int, thread};
 use std::time::Duration;
+use std::{env, os::raw::c_int, thread};
 
 use docopt::Docopt;
 
 use autopush_common::errors::{ApcError, ApcErrorKind, Result};
-use futures::{Future, IntoFuture, future::Either};
+use futures::{future::Either, Future, IntoFuture};
 use tokio_core::reactor::{Handle, Timeout};
 
 mod client;
@@ -81,7 +81,6 @@ fn notify(signals: &[c_int]) -> Result<crossbeam_channel::Receiver<c_int>> {
     Ok(r)
 }
 
-
 /// Convenience future to time out the resolution of `f` provided within the
 /// duration provided.
 ///
@@ -101,7 +100,9 @@ where
     Box::new(f.select2(timeout).then(|res| match res {
         Ok(Either::A((item, _timeout))) => Ok(item),
         Err(Either::A((e, _timeout))) => Err(e.into()),
-        Ok(Either::B(((), _item))) => Err(ApcErrorKind::GeneralError("timed out".to_owned()).into()),
+        Ok(Either::B(((), _item))) => {
+            Err(ApcErrorKind::GeneralError("timed out".to_owned()).into())
+        }
         Err(Either::B((e, _item))) => Err(e.into()),
     }))
 }

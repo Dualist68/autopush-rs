@@ -29,11 +29,9 @@ use tungstenite::{self, Message};
 use autopush_common::errors::{ApcError, ApcErrorKind, Result};
 use autopush_common::logging;
 use autopush_common::notification::Notification;
-//use autopush_common::util::timeout;
 
-use crate::{MyFuture, timeout};
-use crate::db::DynamoStorage;
 use crate::client::Client;
+use crate::db::DynamoStorage;
 use crate::http;
 use crate::megaphone::{
     Broadcast, BroadcastChangeTracker, BroadcastSubs, BroadcastSubsInit, MegaphoneAPIResponse,
@@ -45,6 +43,7 @@ use crate::server::rc::RcObject;
 use crate::server::registry::ClientRegistry;
 use crate::server::webpush_io::WebpushIo;
 use crate::settings::Settings;
+use crate::{timeout, MyFuture};
 
 mod dispatch;
 mod metrics;
