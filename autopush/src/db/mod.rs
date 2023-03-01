@@ -320,6 +320,7 @@ impl DynamoStorage {
     }
 
     /// Store a single message
+    #[allow(dead_code)]
     pub fn store_message(
         &self,
         uaid: &Uuid,
@@ -528,6 +529,7 @@ impl DynamoStorage {
     }
 
     /// Get the set of channel IDs for a user
+    #[allow(dead_code)]
     pub fn get_user_channels(
         &self,
         uaid: &Uuid,
@@ -544,6 +546,7 @@ impl DynamoStorage {
     /// Remove the node ID from a user in the router table.
     /// The node ID will only be cleared if `connected_at` matches up
     /// with the item's `connected_at`.
+    #[allow(dead_code)]
     pub fn remove_node_id(
         &self,
         uaid: &Uuid,
