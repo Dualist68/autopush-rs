@@ -266,7 +266,7 @@ struct RangeKey {
 #[cfg(test)]
 mod tests {
     use super::DynamoDbNotification;
-    use crate::util::us_since_epoch;
+    use autopush_common::util::us_since_epoch;
     use uuid::Uuid;
 
     #[test]
