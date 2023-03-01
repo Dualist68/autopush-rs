@@ -32,7 +32,6 @@ use autopush_common::notification::Notification;
 
 use crate::client::Client;
 use crate::db::DynamoStorage;
-use crate::http;
 use crate::megaphone::{
     Broadcast, BroadcastChangeTracker, BroadcastSubs, BroadcastSubsInit, MegaphoneAPIResponse,
 };
@@ -43,7 +42,7 @@ use crate::server::rc::RcObject;
 use crate::server::registry::ClientRegistry;
 use crate::server::webpush_io::WebpushIo;
 use crate::settings::Settings;
-use crate::{timeout, MyFuture};
+use crate::{http, timeout, MyFuture};
 
 mod dispatch;
 mod metrics;
