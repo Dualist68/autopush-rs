@@ -595,7 +595,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "autoconnect_ws_clientsm"
+name = "autoconnect_ws_sm"
 version = "1.66.0"
 dependencies = [
  "actix-web",

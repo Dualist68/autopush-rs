@@ -1,5 +1,5 @@
 [package]
-name = "autoconnect_ws_clientsm"
+name = "autoconnect_ws_sm"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
