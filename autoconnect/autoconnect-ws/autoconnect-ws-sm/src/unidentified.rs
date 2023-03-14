@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{fmt, sync::Arc};
 
 use cadence::{CountedExt, StatsdClient};
 
@@ -22,6 +22,16 @@ struct UnidentifiedClient {
     /// Client's User-Agent
     ua: String, // XXX: why not borrow? could borrow other stuff..
 }
+
+impl fmt::Debug for UnidentifiedClient {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt.debug_struct("UnidentifiedClient")
+            .field("metrics", &self.metrics)
+            .field("ua", &self.ua)
+            .finish()
+    }
+}
+
 
 impl UnidentifiedClient {
     pub fn new(db: Box<dyn DbClient>, metrics: Arc<StatsdClient>, settings: Settings, ua: &str) -> Self {
@@ -87,6 +97,19 @@ impl UnidentifiedClient {
             // XXX: broadcasts
             broadcasts: std::collections::HashMap::new(),
         };
+        // XXX: WebPushClient vs BroacastClient?  BroadcastClient needs only
+        // listen on ClientMessage and PingManager, not ServerMessages..  its
+        // weird getting a ServerMessage stream from a BroadcastClient when it
+        // evolves into a WebPushClient, though...
+        //
+        // could do:
+        // struct IdentifiedClient {
+        //     client: WebPushClient,
+        //     ping_manager: PingManager, // OR -ws makes this itself (handles all the broadcast code? requested broadcasts are in the ClientMessage though..)..
+        //     server_msgs: ServerMessages, // OR -ws makes this itself
+        //     //broadcasts: Broadcasts, // BroadcastStream? PingManager?
+        //
+        // }
         Ok(((), smsg))
     }
 }
@@ -96,10 +119,11 @@ mod tests {
     use std::sync::Arc;
 
     use cadence::{StatsdClient, NopMetricSink};
+    use uuid::Uuid;
 
     use autoconnect_settings::Settings;
     use autoconnect_web::{protocol::ClientMessage};
-    use autopush_common::db::mock::MockDbClient;
+    use autopush_common::db::{HelloResponse, mock::MockDbClient};
 
     use crate::{error::ClientStateError};
 
@@ -126,9 +150,16 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn hello() {
+    async fn hello_existing_user() {
+        let mut db = MockDbClient::new();
+        // XXX: hello should be in a sub trait
+        db.expect_hello()
+            .returning(|_, _, _, _| Ok(HelloResponse {
+                uaid: Some(Uuid::try_parse(DUMMY_UAID).unwrap()),
+                ..Default::default()
+            }));
         let client = UnidentifiedClient::new(
-            MockDbClient::new().into_boxed_arc(),
+            db.into_boxed_arc(),
             Arc::new(StatsdClient::builder("", NopMetricSink).build()),
             Settings::default(),
             UA,
@@ -140,12 +171,37 @@ mod tests {
             broadcasts: None,
         };
         let result = client.on_client_message(msg).await;
-        //assert!(result.is_ok());
+        assert!(result.is_ok());
     }
 
     #[tokio::test]
-    async fn hello_new_user_doesnt_write() {
-        // ensure db.add_user.never();
-        let db = MockDbClient::new();
+    async fn hello_new_user() {
+        let mut db = MockDbClient::new();
+        // Ensure no write to the db
+        db.expect_hello()
+            .withf(|_, _, _, defer_registration| defer_registration == &true)
+            .returning(|_, _, _, _| Ok(HelloResponse {
+                uaid: Some(Uuid::try_parse(DUMMY_UAID).unwrap()),
+                ..Default::default()
+            }));
+        let client = UnidentifiedClient::new(
+            db.into_boxed_arc(),
+            Arc::new(StatsdClient::builder("", NopMetricSink).build()),
+            Settings::default(),
+            UA,
+        );
+        let msg = ClientMessage::Hello {
+            uaid: None,
+            channel_ids: None,
+            use_webpush: Some(true),
+            broadcasts: None,
+        };
+        let result = client.on_client_message(msg).await;
+        assert!(result.is_ok());
     }
+
+    #[tokio::test]
+    async fn hello_bad_user() {
+    }
+
 }
