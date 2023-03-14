@@ -2,8 +2,8 @@ use std::{fmt, sync::Arc};
 
 use cadence::{CountedExt, StatsdClient};
 
+use autoconnect_protocol::{ClientMessage, ServerMessage};
 use autoconnect_settings::Settings;
-use autoconnect_web::{protocol::{ClientMessage, ServerMessage}};
 use autopush_common::{
     db::{client::DbClient, HelloResponse},
     util::ms_since_epoch,
@@ -15,7 +15,7 @@ use crate::{error::ClientStateError};
 type SMResult<T> = Result<T, ClientStateError>;
 
 //#[derive(Debug)]
-struct UnidentifiedClient {
+pub struct UnidentifiedClient {
     db: Box<dyn DbClient>,
     metrics: Arc<StatsdClient>,
     settings: Settings,
@@ -121,8 +121,8 @@ mod tests {
     use cadence::{StatsdClient, NopMetricSink};
     use uuid::Uuid;
 
+    use autoconnect_protocol::ClientMessage;
     use autoconnect_settings::Settings;
-    use autoconnect_web::{protocol::ClientMessage};
     use autopush_common::db::{HelloResponse, mock::MockDbClient};
 
     use crate::{error::ClientStateError};

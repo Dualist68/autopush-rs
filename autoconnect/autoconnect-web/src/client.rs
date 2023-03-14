@@ -11,6 +11,7 @@ use futures_util::StreamExt;
 use serde_json::json;
 use uuid::Uuid;
 
+use autoconnect_protocol::{ClientAck, ClientMessage, ServerMessage};
 use autoconnect_registry::RegisteredClient;
 use autoconnect_settings::options::ServerOptions;
 use autopush_common::db::{self, UserRecord};
@@ -19,7 +20,6 @@ use autopush_common::notification::Notification;
 use autopush_common::util::ms_since_epoch;
 
 use crate::broadcast::Broadcast;
-use crate::protocol::{ClientAck, ClientMessage, ServerMessage};
 
 /// Client & Registry functions.
 /// These are common functions run by connected WebSocket clients.

@@ -4,6 +4,7 @@ members = [
     "autopush",
     "autoendpoint",
     "autoconnect",
+    "autoconnect/autoconnect-protocol",
     "autoconnect/autoconnect-settings",
     "autoconnect/autoconnect-web",
     "autoconnect/autoconnect-ws",
@@ -88,6 +89,7 @@ url = "2.2"
 
 autoconnect = {path = "./autoconnect"}
 autopush_common = {path = "./autopush-common"}
+autoconnect_protocol = {path = "./autoconnect/autoconnect-protocol"}
 autoconnect_registry = {path = "./autoconnect/autoconnect-registry"}
 autoconnect_settings = {path = "./autoconnect/autoconnect-settings"}
 autoconnect_web = {path = "./autoconnect/autoconnect-web"}
