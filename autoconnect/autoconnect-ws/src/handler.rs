@@ -1,4 +1,7 @@
+use std::sync::Arc;
+
 //use futures::select;
+use cadence::StatsdClient;
 use futures_util::{
     future::{self, Either},
     FutureExt, StreamExt,
@@ -7,26 +10,30 @@ use std::time::{Duration, Instant};
 use tokio::{pin, select, time::interval};
 
 use autoconnect_protocol::ClientMessage;
-use autoconnect_ws_sm::{
-    UnidentifiedClient,
-};
+use autoconnect_registry::ClientRegistry;
+use autoconnect_ws_sm::UnidentifiedClient;
+use autopush_common::db::client::DbClient;
 
 use crate::session::{Session, SessionImpl};
 
 pub async fn webpush_ws(
+    db: Box<dyn DbClient>,
+    metrics: Arc<StatsdClient>,
+    registry: Arc<ClientRegistry>,
     mut session: actix_ws::Session,
     mut msg_stream: actix_ws::MessageStream,
     user_agent: String,
 ) {
+    let mut client = UnidentifiedClient::new(
+        db,
+        metrics,
+        autoconnect_settings::Settings::default(),
+        &user_agent,
+    );
     let mut session = SessionImpl::new(&session);
-    /*
-    let mut client = WebPushClientState::Unidentified(Unidentified::new(
-        Box::new(session.clone()),
-        user_agent,
-    ));
-     */
-    //let mut client = UnidentifiedClient::new(
-    //_webpush_ws(client, &mut session, msg_stream).await.expect("XXX");
+    _webpush_ws(client, &mut session, msg_stream)
+        .await
+        .expect("XXX");
     panic!();
 }
 
@@ -48,7 +55,7 @@ async fn _webpush_ws(
     tx.try_send("ServerNotification".to_owned()).unwrap();
     */
 
-    client = client.on_client_message(ClientMessage::Hello)?;
+    //client = client.on_client_message(ClientMessage::Hello)?;
     // The first ClientMessage succeeded: we're in the Identified state
     let mut interval = interval(Duration::from_secs(3));
     let _reason = loop {
@@ -79,6 +86,7 @@ async fn _webpush_ws(
             },
             //notif = rx.select_next_some() => {
             //notif = client.notifs_stream().unwrap().select_next_some() => {
+            /*
             maybe_notif = client.notifs_stream().unwrap().next() => {
                 if let Some(notif) = maybe_notif {
                     eprintln!("NOTIF: {:#?}", notif);
@@ -89,6 +97,7 @@ async fn _webpush_ws(
                     break;
                 }
             }
+            */
             //_ = tick.fuse() => {
             _ = tick => {
                 session.ping(&[]).await;
@@ -113,29 +122,38 @@ async fn _webpush_ws(
 #[cfg(test)]
 mod tests {
     use async_stream::stream;
+    use cadence::{NopMetricSink, StatsdClient};
     use futures::stream;
     use futures_util::pin_mut;
     use tokio;
 
-    use autoconnect_ws_sm::{
-        session::{MockSession, SessionImpl},
-        sm::{ClientMessage, Unidentified, WebPushClientState},
-    };
+    use autoconnect_settings::Settings;
+    use autoconnect_ws_sm::UnidentifiedClient;
+    use autopush_common::db::{mock::MockDbClient, HelloResponse};
+
+    use crate::session::{MockSession, SessionImpl};
 
     use super::*;
 
+    const UA: &str =
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:95.0) Gecko/20100101 Firefox/95.0";
+
     #[actix_web::test]
-    async fn it_works() {
+    async fn basic() {
         let session = MockSession::new();
-        let mut client = WebPushClientState::Unidentified(Unidentified::new(
-            Box::new(session),
-            "foo".to_owned(),
-        ));
+        let mut client = UnidentifiedClient::new(
+            MockDbClient::new().into_boxed_arc(),
+            Arc::new(StatsdClient::builder("", NopMetricSink).build()),
+            Settings::default(),
+            UA,
+        );
 
         let stream = stream::iter(vec![Ok(actix_ws::Message::Nop), Ok(actix_ws::Message::Nop)]);
 
         let mut session2 = MockSession::new();
-        _webpush_ws(client, &mut session2, stream).await.expect("foo");
+        _webpush_ws(client, &mut session2, stream)
+            .await
+            .expect("foo");
     }
 
     #[actix_web::test]
@@ -143,10 +161,19 @@ mod tests {
         // XXX: into_boxed_arc could also probably solve this? I think it requires Arc<Session>
         let smsession = MockSession::new();
         //let mut client = WebPushClient::new(<no sesion>, "foo")
+        /*
         let mut client = WebPushClientState::Unidentified(Unidentified::new(
             Box::new(smsession),
             "foo".to_owned(),
         ));
+        */
+
+        let mut client = UnidentifiedClient::new(
+            MockDbClient::new().into_boxed_arc(),
+            Arc::new(StatsdClient::builder("", NopMetricSink).build()),
+            Settings::default(),
+            UA,
+        );
 
         let mut hsession = MockSession::new();
         /*
@@ -166,9 +193,7 @@ mod tests {
             yield Ok(actix_ws::Message::Nop);
         };
         pin_mut!(s);
-        hsession.expect_ping()
-            .times(1)
-            .returning(|_| Ok(()));
+        hsession.expect_ping().times(1).returning(|_| Ok(()));
         // client::webpush_ws(session, s);
         // client.ws(session, s);
         _webpush_ws(client, &mut hsession, s).await.expect("foo");

@@ -10,7 +10,7 @@ use autopush_common::{
 };
 //use autopush_common::errors::{ApcError, ApcErrorKind, Result};
 
-use crate::{error::ClientStateError};
+use crate::error::ClientStateError;
 
 type SMResult<T> = Result<T, ClientStateError>;
 
@@ -32,9 +32,13 @@ impl fmt::Debug for UnidentifiedClient {
     }
 }
 
-
 impl UnidentifiedClient {
-    pub fn new(db: Box<dyn DbClient>, metrics: Arc<StatsdClient>, settings: Settings, ua: &str) -> Self {
+    pub fn new(
+        db: Box<dyn DbClient>,
+        metrics: Arc<StatsdClient>,
+        settings: Settings,
+        ua: &str,
+    ) -> Self {
         UnidentifiedClient {
             db,
             metrics,
@@ -68,12 +72,15 @@ impl UnidentifiedClient {
         // XXX: sending push messages too?
 
         let defer_registration = uaid.is_none();
-        let hello_response = self.db.hello(
-            connected_at,
-            uaid.as_ref(),
-            "https://cnn.com/",
-            defer_registration,
-        ).await?;
+        let hello_response = self
+            .db
+            .hello(
+                connected_at,
+                uaid.as_ref(),
+                "https://cnn.com/",
+                defer_registration,
+            )
+            .await?;
 
         let Some(uaid) = hello_response.uaid else {
             return Err(ClientStateError::AlreadyConnected);
@@ -118,14 +125,14 @@ impl UnidentifiedClient {
 mod tests {
     use std::sync::Arc;
 
-    use cadence::{StatsdClient, NopMetricSink};
+    use cadence::{NopMetricSink, StatsdClient};
     use uuid::Uuid;
 
     use autoconnect_protocol::ClientMessage;
     use autoconnect_settings::Settings;
-    use autopush_common::db::{HelloResponse, mock::MockDbClient};
+    use autopush_common::db::{mock::MockDbClient, HelloResponse};
 
-    use crate::{error::ClientStateError};
+    use crate::error::ClientStateError;
 
     use super::UnidentifiedClient;
 
@@ -143,21 +150,25 @@ mod tests {
             UA,
         );
         assert!(client.on_client_message(ClientMessage::Ping).await.is_err());
-        assert!(client.on_client_message(ClientMessage::Register {
-            channel_id: DUMMY_CHID.to_owned(),
-            key: None,
-        }).await.is_err());
+        assert!(client
+            .on_client_message(ClientMessage::Register {
+                channel_id: DUMMY_CHID.to_owned(),
+                key: None,
+            })
+            .await
+            .is_err());
     }
 
     #[tokio::test]
     async fn hello_existing_user() {
         let mut db = MockDbClient::new();
         // XXX: hello should be in a sub trait
-        db.expect_hello()
-            .returning(|_, _, _, _| Ok(HelloResponse {
+        db.expect_hello().returning(|_, _, _, _| {
+            Ok(HelloResponse {
                 uaid: Some(Uuid::try_parse(DUMMY_UAID).unwrap()),
                 ..Default::default()
-            }));
+            })
+        });
         let client = UnidentifiedClient::new(
             db.into_boxed_arc(),
             Arc::new(StatsdClient::builder("", NopMetricSink).build()),
@@ -180,10 +191,12 @@ mod tests {
         // Ensure no write to the db
         db.expect_hello()
             .withf(|_, _, _, defer_registration| defer_registration == &true)
-            .returning(|_, _, _, _| Ok(HelloResponse {
-                uaid: Some(Uuid::try_parse(DUMMY_UAID).unwrap()),
-                ..Default::default()
-            }));
+            .returning(|_, _, _, _| {
+                Ok(HelloResponse {
+                    uaid: Some(Uuid::try_parse(DUMMY_UAID).unwrap()),
+                    ..Default::default()
+                })
+            });
         let client = UnidentifiedClient::new(
             db.into_boxed_arc(),
             Arc::new(StatsdClient::builder("", NopMetricSink).build()),
@@ -201,7 +214,5 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn hello_bad_user() {
-    }
-
+    async fn hello_bad_user() {}
 }

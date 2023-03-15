@@ -447,6 +447,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-stream"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ad445822218ce64be7a341abfb0b1ea43b5c23aa83902542a4542e78309d8e5e"
+dependencies = [
+ "async-stream-impl",
+ "futures-core",
+ "pin-project-lite 0.2.9",
+]
+
+[[package]]
+name = "async-stream-impl"
+version = "0.3.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e4655ae1a7b0cdf149156f780c5bf3f1352bc53cbd9e0a361a7ef7b22947e965"
+dependencies = [
+ "proc-macro2 1.0.51",
+ "quote 1.0.23",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "async-trait"
 version = "0.1.66"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -577,6 +599,7 @@ dependencies = [
  "actix-rt",
  "actix-web",
  "actix-ws",
+ "autoconnect_protocol",
  "autoconnect_registry",
  "autoconnect_settings",
  "autoconnect_ws",
@@ -604,10 +627,14 @@ dependencies = [
  "actix-rt",
  "actix-web",
  "actix-ws",
+ "async-stream",
  "async-trait",
  "autoconnect_protocol",
+ "autoconnect_registry",
+ "autoconnect_settings",
  "autoconnect_ws_sm",
  "autopush_common",
+ "cadence",
  "futures 0.3.26",
  "futures-util",
  "mockall 0.11.3",

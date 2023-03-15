@@ -25,6 +25,7 @@ slog-scope.workspace = true
 uuid.workspace = true
 
 
+autoconnect_protocol.workspace = true
 autoconnect_registry.workspace = true
 autoconnect_settings.workspace = true
 autoconnect_ws.workspace = true

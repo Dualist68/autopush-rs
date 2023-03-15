@@ -11,13 +11,17 @@ actix-http.workspace = true
 actix-rt.workspace = true
 actix-web.workspace = true
 actix-ws.workspace = true
+cadence.workspace = true
 futures.workspace = true
 futures-util.workspace = true
 tokio.workspace = true
 
+async-stream = "0.3"
 async-trait = "0.1"
 mockall = "0.11"
 
 autoconnect_protocol.workspace = true
+autoconnect_registry.workspace = true
+autoconnect_settings.workspace = true
 autoconnect_ws_sm = { path = "./autoconnect-ws-sm" }
 autopush_common.workspace = true

@@ -4,7 +4,7 @@ use actix_ws::Closed;
 use async_trait::async_trait;
 use mockall::automock;
 
-use autoconnect_protocol::ClientMessage;
+use autoconnect_protocol::ServerMessage;
 //use crate::sm::ClientMessage;
 //use autopush::src::server::protocol::ServerMessage;
 
@@ -21,7 +21,7 @@ pub trait Session {
     where
         T: Into<String> + Send + 'static;
     */
-    async fn text(&mut self, msg: ClientMessage) -> Result<(), Closed>;
+    async fn text(&mut self, msg: ServerMessage) -> Result<(), Closed>;
 
     /// See [`actix_ws::Session::binary`]
     //#[mockall::concretize]
@@ -32,7 +32,7 @@ pub trait Session {
     where
        T: Into<Bytes> + Send + 'static;
     */
-    async fn binary(&mut self, msg: ClientMessage) -> Result<(), Closed>;
+    //async fn binary(&mut self, msg: ServerMessage) -> Result<(), Closed>;
 
     /// See [`actix_ws::Session::ping`]
     async fn ping(&mut self, msg: &[u8]) -> Result<(), Closed>;
@@ -59,13 +59,16 @@ impl SessionImpl {
 
 #[async_trait]
 impl Session for SessionImpl {
-    async fn text(&mut self, msg: ClientMessage) -> Result<(), Closed> {
-        self.inner.text(msg).await
+    async fn text(&mut self, msg: ServerMessage) -> Result<(), Closed> {
+        // XXX:
+        self.inner.text(msg.to_json().unwrap()).await
     }
 
-    async fn binary(&mut self, msg: ClientMessage) -> Result<(), Closed> {
-        self.inner.binary(msg).await
+    /*
+    async fn binary(&mut self, msg: ServerMessage) -> Result<(), Closed> {
+        self.inner.binary(msg.to_json()).await
     }
+    */
 
     async fn ping(&mut self, msg: &[u8]) -> Result<(), Closed> {
         self.inner.ping(msg).await
@@ -78,5 +81,4 @@ impl Session for SessionImpl {
     async fn close(mut self, reason: Option<CloseReason>) -> Result<(), Closed> {
         self.inner.close(reason).await
     }
-
 }
