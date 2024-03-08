@@ -44,6 +44,7 @@ or to deploy autopush to a production environment for Firefox.
   * [Overview](architecture.md#overview)
   * [Cryptography](architecture.md#cryptography)
   * [Storage Tables](architecture.md#storage)
+  * [Running Bigtable](bigtable.md)
   * [Push Characteristics](architecture.md#push-characteristics)
 * [Running Autopush](running.md)
   * [Overview](running.md#overview)
@@ -136,6 +137,7 @@ environment used by Firefox/FirefoxOS.
 
 * [Glossary](glossary.md)
 * [Why rust?](rust.md)
+* [A Brief History](history.md)
 
 ## License
 
