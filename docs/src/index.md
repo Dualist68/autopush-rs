@@ -46,10 +46,11 @@ or to deploy autopush to a production environment for Firefox.
   * [Storage Tables](architecture.md#storage)
   * [Running Bigtable](bigtable.md)
   * [Push Characteristics](architecture.md#push-characteristics)
+  * [Push Proprietary Protocol](protocol.md)
 * [Running Autopush](running.md)
   * [Overview](running.md#overview)
   * [Setup](running.md#setup)
-  * [Start Autopush](running.md#start-autopush)
+  * [Start Autopush](running.md[#start-autopush)
   * [Configuration](running.md#configuration)
 
 </div>
